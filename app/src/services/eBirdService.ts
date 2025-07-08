@@ -17,6 +17,7 @@ export interface BirdSighting {
   obsReviewed: boolean;
   locationPrivate: boolean;
   subId: string;
+  checklistId: string;
 }
 
 export const getNearbyNotableSightings = async (lat: number, lng: number): Promise<BirdSighting[]> => {
@@ -31,7 +32,7 @@ export const getNearbyNotableSightings = async (lat: number, lng: number): Promi
   const params = new URLSearchParams({
     lat: lat.toString(),
     lng: lng.toString(),
-    dist: '50', // Search radius in kilometers (max 50)
+    dist: '10', // Search radius in kilometers (max 50)
     back: '7', // Search within the last 7 days
     detail: 'full',
   });

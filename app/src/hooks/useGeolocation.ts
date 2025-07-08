@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { getCityFromCoords } from '../services/locationService';
 
 interface GeolocationState {
   loading: boolean;
@@ -7,6 +8,7 @@ interface GeolocationState {
     latitude: number;
     longitude: number;
   } | null;
+  locationName: string | null;
 }
 
 const useGeolocation = () => {
@@ -14,18 +16,25 @@ const useGeolocation = () => {
     loading: true,
     error: null,
     data: null,
+    locationName: null,
   });
 
   useEffect(() => {
-    const setDefaultLocation = () => {
+    const setLocationData = async (latitude: number, longitude: number, error?: GeolocationPositionError | Error) => {
+      const locationName = await getCityFromCoords(latitude, longitude);
       setState({
         loading: false,
-        error: new Error('Using default location. Geolocation failed or was denied.'),
-        data: {
-          latitude: 37.7749, // San Francisco
-          longitude: -122.4194, // San Francisco
-        },
+        error: error || null,
+        data: { latitude, longitude },
+        locationName,
       });
+    };
+
+    const setDefaultLocation = () => {
+      const lat = 37.804363; // Oakland
+      const lon = -122.271113; // Oakland
+      const err = new Error('Using default location. Geolocation failed or was denied.');
+      setLocationData(lat, lon, err);
     };
 
     if (!navigator.geolocation) {
@@ -34,14 +43,7 @@ const useGeolocation = () => {
     }
 
     const onSuccess = (position: GeolocationPosition) => {
-      setState({
-        loading: false,
-        error: null,
-        data: {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-        },
-      });
+      setLocationData(position.coords.latitude, position.coords.longitude);
     };
 
     const onError = (error: GeolocationPositionError) => {
