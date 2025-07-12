@@ -3,17 +3,38 @@
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import theme from './theme/theme';
-import Layout from './components/Layout';
-import { AuthProvider } from './context/AuthContext';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { lazy, Suspense } from 'react';
-import { CircularProgress, Box } from '@mui/material';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
-// Lazy load the page components
-const Discovery = lazy(() => import('./pages/Discovery'));
-const MySightings = lazy(() => import('./pages/MySightings'));
-const Achievements = lazy(() => import('./pages/Achievements'));
-const Profile = lazy(() => import('./pages/Profile'));
+import { CircularProgress, Box } from '@mui/material';
+import PrivateRoutes from './components/PrivateRoutes';
+
+import LandingPage from './pages/LandingPage';
+
+const AppRoutes = () => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  return (
+    <Routes>
+      {user ? (
+        <Route path="/*" element={<PrivateRoutes />} />
+      ) : (
+        <>
+          <Route path="/welcome" element={<LandingPage />} />
+          <Route path="*" element={<Navigate to="/welcome" replace />} />
+        </>
+      )}
+    </Routes>
+  );
+};
 
 function App() {
   return (
@@ -21,22 +42,7 @@ function App() {
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <Router>
-          <Layout>
-            <Suspense
-              fallback={
-                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - 64px)' }}>
-                  <CircularProgress />
-                </Box>
-              }
-            >
-              <Routes>
-                <Route path="/" element={<Discovery />} />
-                <Route path="/sightings" element={<MySightings />} />
-                <Route path="/achievements" element={<Achievements />} />
-                <Route path="/profile" element={<Profile />} />
-              </Routes>
-            </Suspense>
-          </Layout>
+          <AppRoutes />
         </Router>
       </ThemeProvider>
     </AuthProvider>

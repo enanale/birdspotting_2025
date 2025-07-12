@@ -20,7 +20,7 @@ export interface BirdSighting {
   checklistId: string;
 }
 
-export const getNearbyNotableSightings = async (lat: number, lng: number): Promise<BirdSighting[]> => {
+export const getNearbySightings = async (lat: number, lng: number): Promise<BirdSighting[]> => {
   if (!API_KEY) {
     throw new Error('eBird API key not found. Please add VITE_EBIRD_API_KEY to your .env file.');
   }
@@ -34,10 +34,9 @@ export const getNearbyNotableSightings = async (lat: number, lng: number): Promi
     lng: lng.toString(),
     dist: '10', // Search radius in kilometers (max 50)
     back: '7', // Search within the last 7 days
-    detail: 'full',
   });
 
-  const url = `${BASE_URL}/data/obs/geo/recent/notable?${params.toString()}`;
+  const url = `${BASE_URL}/data/obs/geo/recent?${params.toString()}`;
 
   try {
     const response = await fetch(url, { headers });
