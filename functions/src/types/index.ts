@@ -6,7 +6,9 @@ export interface BirdImageCacheDoc {
   speciesCode: string; // The eBird species code
   comName?: string; // Common name of the bird if known
   sciName?: string; // Scientific name of the bird if known
-  imageUrl: string | null; // URL to the image (160w)
+  imageUrl: string | null; // Deprecated: use thumbnailUrl
+  thumbnailUrl?: string | null; // ~320px thumbnail
+  originalUrl?: string | null; // High-resolution original image
   createdAt: FirebaseFirestore.Timestamp;
   updatedAt: FirebaseFirestore.Timestamp;
   processAfter?: FirebaseFirestore.Timestamp;
@@ -19,7 +21,9 @@ export interface BirdImageCacheDoc {
 export interface BirdImage {
   speciesCode: string;
   comName: string;
-  imageUrl: string | null;
+  imageUrl: string | null; // Deprecated: use thumbnailUrl
+  thumbnailUrl: string | null;
+  originalUrl: string | null;
 }
 
 // Interface for getBirdPhotos callable function data

@@ -30,18 +30,36 @@ function normalizeOldCacheEntry(
   return normalized;
 }
 
+/**
+ * Detects if a bird species is a hybrid based on its name
+ * @param {string} comName - Common name
+ * @param {string} sciName - Scientific name
+ * @return {boolean} True if it's a hybrid
+ */
+function isHybridSpecies(comName: string, sciName: string): boolean {
+  const hybridPatterns = [
+    /\s+x\s+/i, // "Blue-winged x Cinnamon Teal"
+    /\(hybrid\)/i, // "(hybrid)" suffix
+    /hybrid\s+/i, // "hybrid " prefix
+  ];
+
+  return hybridPatterns.some((pattern) =>
+    pattern.test(comName) || pattern.test(sciName)
+  );
+}
+
 // User-Agent for Wikipedia API following their policy:
 // https://meta.wikimedia.org/wiki/User-Agent_policy
 const WIKIPEDIA_USER_AGENT = "Birdspotting/1.0 (https://birdspotting-4e0da.web.app; contact@birdspotting.app)";
 
 /**
- * Fetches a bird image from Wikipedia using the scientific name or common name fallback
+ * Fetches bird images from Wikipedia using the scientific name or common name fallback
  * @param {string} sciName - Scientific name of the bird
  * @param {string} comName - Common name of the bird
- * @return {Promise<string|null>} URL to the thumbnail or null if not found
+ * @return {Promise} URLs to the images
  */
-async function getBirdImageFromWikipedia(sciName: string, comName?: string): Promise<string | null> {
-  const tryLookup = async (name: string): Promise<string | null> => {
+async function getBirdImageFromWikipedia(sciName: string, comName?: string): Promise<{ thumbnail: string | null, original: string | null }> {
+  const tryLookup = async (name: string): Promise<{ thumbnail: string | null, original: string | null } | null> => {
     if (!name) return null;
     try {
       console.log(`Searching Wikipedia for: ${name}`);
@@ -59,10 +77,10 @@ async function getBirdImageFromWikipedia(sciName: string, comName?: string): Pro
       }
 
       const data = await response.json();
-      if (data.thumbnail && data.thumbnail.source) {
-        return data.originalimage ? data.originalimage.source : data.thumbnail.source;
-      }
-      return null;
+      return {
+        thumbnail: data.thumbnail ? data.thumbnail.source : null,
+        original: data.originalimage ? data.originalimage.source : (data.thumbnail ? data.thumbnail.source : null),
+      };
     } catch (error) {
       console.error(`Error fetching from Wikipedia for ${name}:`, error);
       return null;
@@ -70,15 +88,15 @@ async function getBirdImageFromWikipedia(sciName: string, comName?: string): Pro
   };
 
   // 1. Try Scientific Name
-  let imageUrl = await tryLookup(sciName);
+  let result = await tryLookup(sciName);
 
   // 2. Fallback to Common Name
-  if (!imageUrl && comName) {
+  if ((!result || !result.thumbnail) && comName) {
     console.log(`Scientific name failed for ${sciName}, trying common name: ${comName}`);
-    imageUrl = await tryLookup(comName);
+    result = await tryLookup(comName);
   }
 
-  return imageUrl;
+  return result || {thumbnail: null, original: null};
 }
 
 /**
@@ -145,18 +163,32 @@ export const processImageQueue = onSchedule({
 
         console.log(`Processing ${speciesCode} | Name: ${comName || "???"} | Sci: ${sciName || "???"}`);
 
-        // Try Wikipedia using scientific name with common name fallback
-        const imageUrl = await getBirdImageFromWikipedia(sciName, comName);
+        // Check for hybrid species before calling Wikipedia
+        if (isHybridSpecies(comName, sciName)) {
+          console.log(`Skipping hybrid species: ${comName} (${sciName})`);
+          await doc.ref.update({
+            status: "FAILED" as PhotoStatus,
+            comName,
+            lastError: "Skipped: Hybrid species",
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+          continue; // Skip to next item in queue
+        }
 
-        if (imageUrl) {
-          // Update with completed status and image URL
+        // Try Wikipedia using scientific name with common name fallback
+        const {thumbnail, original} = await getBirdImageFromWikipedia(sciName, comName);
+
+        if (thumbnail) {
+          // Update with completed status and image URLs
           await doc.ref.update({
             status: "COMPLETED" as PhotoStatus,
             comName: comName || speciesCode,
-            imageUrl,
+            imageUrl: thumbnail, // Backward compatibility
+            thumbnailUrl: thumbnail,
+            originalUrl: original,
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
           });
-          console.log(`Successfully indexed image for ${speciesCode}: ${imageUrl}`);
+          console.log(`Successfully indexed images for ${speciesCode}: Thumb=${thumbnail}, Orig=${original}`);
         } else {
           // Mark as failed
           await doc.ref.update({

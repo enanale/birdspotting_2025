@@ -17,7 +17,10 @@ function normalizeOldCacheEntry(
     status: docData.status || "PENDING",
     speciesCode: docData.speciesCode || speciesCode,
     comName: docData.comName || "",
+    sciName: docData.sciName || "",
     imageUrl: docData.imageUrl || null,
+    thumbnailUrl: docData.thumbnailUrl || docData.imageUrl || null, // Fallback for legacy
+    originalUrl: docData.originalUrl || docData.imageUrl || null, // Fallback for legacy
     createdAt: docData.createdAt || admin.firestore.Timestamp.now(),
     updatedAt: docData.updatedAt || admin.firestore.Timestamp.now(),
     priority: docData.priority || 1,
@@ -76,10 +79,12 @@ export const getBirdPhotos = onCall(async (request) => {
           await cacheRef.update(updateData);
         }
 
-        if (data.status === "COMPLETED" && data.imageUrl) {
+        if (data.status === "COMPLETED" && (data.thumbnailUrl || data.imageUrl)) {
           // Return cached image if it exists and is complete
           results[speciesCode] = {
             imageUrl: data.imageUrl,
+            thumbnailUrl: data.thumbnailUrl || data.imageUrl,
+            originalUrl: data.originalUrl || data.imageUrl,
             speciesCode: data.speciesCode,
             comName: data.comName || commonName || "",
           };

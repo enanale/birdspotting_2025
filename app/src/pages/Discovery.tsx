@@ -64,9 +64,9 @@ const Discovery: React.FC = () => {
             <React.Fragment key={comName}>
               <ListItemButton onClick={() => handleBirdClick(comName)}>
                 <ListItemAvatar>
-                  <Avatar src={photos[birdSightings[0].speciesCode]?.imageUrl || ''}>
+                  <Avatar src={photos[birdSightings[0].speciesCode]?.thumbnailUrl || ''}>
                     {/* Fallback icon if image is not found or loading */}
-                    {!photos[birdSightings[0].speciesCode]?.imageUrl && <ImageIcon />}
+                    {!photos[birdSightings[0].speciesCode]?.thumbnailUrl && <ImageIcon />}
                   </Avatar>
                 </ListItemAvatar>
                 <ListItemText
@@ -77,10 +77,10 @@ const Discovery: React.FC = () => {
               </ListItemButton>
               <Collapse in={openBirds[comName]} timeout="auto" unmountOnExit>
                 <Box sx={{ px: 4, py: 2 }}>
-                  {photos[birdSightings[0].speciesCode]?.imageUrl ? (
+                  {photos[birdSightings[0].speciesCode]?.originalUrl ? (
                     <Box
                       component="img"
-                      src={photos[birdSightings[0].speciesCode]?.imageUrl || ''}
+                      src={photos[birdSightings[0].speciesCode]?.originalUrl || ''}
                       alt={comName}
                       sx={{
                         width: '100%',

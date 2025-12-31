@@ -2,7 +2,9 @@
 import { getFunctions, httpsCallable } from 'firebase/functions';
 
 export interface BirdImage {
-  imageUrl: string;     // URL to the 160w image from eBird
+  imageUrl: string;     // Deprecated: use thumbnailUrl
+  thumbnailUrl: string; // URL to the ~320px thumbnail
+  originalUrl: string;  // URL to the high-resolution original image
   speciesCode: string;  // eBird species code
   comName: string;      // Common name of the bird
 }
