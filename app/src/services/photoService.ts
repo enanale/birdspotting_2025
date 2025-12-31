@@ -13,12 +13,17 @@ export interface PhotosByBird {
 
 /**
  * Fetches bird photos for a list of bird species by calling the 'getBirdPhotos' Cloud Function.
- * This function leverages server-side caching, scraping of eBird.org, and a queue-based 
- * architecture to handle rate limits.
+ * This function leverages server-side caching and the Wikipedia API.
  * @param speciesCodes An array of eBird species codes.
+ * @param commonNames Optional mapping of species code to common name.
+ * @param scientificNames Optional mapping of species code to scientific name (used for Wikipedia).
  * @returns A promise that resolves to an object mapping each species code to its image data.
  */
-export const getBirdPhotos = async (speciesCodes: string[]): Promise<PhotosByBird> => {
+export const getBirdPhotos = async (
+  speciesCodes: string[],
+  commonNames: Record<string, string> = {},
+  scientificNames: Record<string, string> = {}
+): Promise<PhotosByBird> => {
   if (speciesCodes.length === 0) {
     return {};
   }
@@ -27,7 +32,7 @@ export const getBirdPhotos = async (speciesCodes: string[]): Promise<PhotosByBir
   const getBirdPhotosFunction = httpsCallable(functions, 'getBirdPhotos');
 
   try {
-    const result = await getBirdPhotosFunction({ speciesCodes });
+    const result = await getBirdPhotosFunction({ speciesCodes, commonNames, scientificNames });
     const data = result.data as { photosByBird: PhotosByBird };
     return data.photosByBird || {};
   } catch (error) {

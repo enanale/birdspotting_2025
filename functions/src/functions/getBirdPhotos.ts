@@ -34,9 +34,9 @@ function normalizeOldCacheEntry(
  * @returns Object with photo info for each requested species code
  */
 export const getBirdPhotos = onCall(async (request) => {
-  const {speciesCodes, commonNames = {}} = request.data as CallableData;
+  const {speciesCodes, commonNames = {}, scientificNames = {}} = request.data as CallableData;
   if (!speciesCodes || !Array.isArray(speciesCodes) ||
-      speciesCodes.length === 0) {
+    speciesCodes.length === 0) {
     throw new HttpsError(
       "invalid-argument",
       "The function must be called with a 'speciesCodes' array."
@@ -46,8 +46,9 @@ export const getBirdPhotos = onCall(async (request) => {
   const results: Record<string, BirdImage | null> = {};
 
   for (const speciesCode of speciesCodes) {
-    // Get common name if provided, otherwise use the species code as a fallback
+    // Get common name and scientific name if provided
     const commonName = commonNames[speciesCode] || "";
+    const scientificName = scientificNames[speciesCode] || "";
     const cacheRef = db.collection("ebird_image_cache").doc(speciesCode);
     try {
       const doc = await cacheRef.get();
@@ -55,14 +56,24 @@ export const getBirdPhotos = onCall(async (request) => {
         // Normalize data to ensure all fields exist (handles old entries)
         const data = normalizeOldCacheEntry(doc.data() as FirebaseFirestore.DocumentData, speciesCode);
 
-        // If we have a common name from the client and the database doesn't have one yet, update it
+        // Update metadata if provided and missing
+        const updateData: Record<string, string | admin.firestore.FieldValue> = {};
+        let needsUpdate = false;
+
         if (commonName && (!data.comName || data.comName === "")) {
-          await cacheRef.update({
-            comName: commonName,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-          });
-          // Update our local copy of the data
+          updateData.comName = commonName;
           data.comName = commonName;
+          needsUpdate = true;
+        }
+
+        if (scientificName && (!data.sciName || data.sciName === "")) {
+          updateData.sciName = scientificName;
+          needsUpdate = true;
+        }
+
+        if (needsUpdate) {
+          updateData.updatedAt = admin.firestore.FieldValue.serverTimestamp();
+          await cacheRef.update(updateData);
         }
 
         if (data.status === "COMPLETED" && data.imageUrl) {
@@ -85,15 +96,15 @@ export const getBirdPhotos = onCall(async (request) => {
               status: "PENDING" as PhotoStatus,
               updatedAt: admin.firestore.FieldValue.serverTimestamp(),
               priority: admin.firestore.FieldValue.increment(1),
-              // Update common name if available
               ...(commonName ? {comName: commonName} : {}),
+              ...(scientificName ? {sciName: scientificName} : {}),
             });
           } else {
             // Just bump the priority for frequently requested items
             await cacheRef.update({
               priority: admin.firestore.FieldValue.increment(1),
-              // Update common name if available
               ...(commonName ? {comName: commonName} : {}),
+              ...(scientificName ? {sciName: scientificName} : {}),
             });
           }
 
@@ -104,14 +115,14 @@ export const getBirdPhotos = onCall(async (request) => {
           await cacheRef.set({
             status: "PENDING" as PhotoStatus,
             speciesCode,
-            comName: commonName || data.comName || "", // Use provided common name or existing one
+            comName: commonName || data.comName || "",
+            sciName: scientificName || data.sciName || "",
             imageUrl: null,
-            createdAt: data.createdAt ||
-                       admin.firestore.FieldValue.serverTimestamp(),
+            createdAt: data.createdAt || admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
             priority: 1,
             errorCount: 0,
-          });
+          } as BirdImageCacheDoc);
           results[speciesCode] = null;
         }
       } else {
@@ -119,19 +130,20 @@ export const getBirdPhotos = onCall(async (request) => {
         await cacheRef.set({
           status: "PENDING" as PhotoStatus,
           speciesCode,
-          comName: "", // Will be populated during processing
+          comName: commonName,
+          sciName: scientificName,
           imageUrl: null,
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
           priority: 1,
           errorCount: 0,
-        });
+        } as BirdImageCacheDoc);
 
         results[speciesCode] = null;
       }
     } catch (error) {
       console.error(`Failed to process ${speciesCode}:`, error);
-      results[speciesCode] = null; // Indicate failure for this species
+      results[speciesCode] = null;
     }
   }
 

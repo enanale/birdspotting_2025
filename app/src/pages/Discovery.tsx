@@ -27,11 +27,16 @@ const Discovery: React.FC = () => {
   // Trigger photo loading when sightings change
   React.useEffect(() => {
     if (Object.keys(groupedByBird).length > 0) {
-      const speciesCodes = Object.values(groupedByBird)
-        .flat()
-        .map(s => s.speciesCode);
-      const uniqueSpecies = [...new Set(speciesCodes)];
-      loadPhotosForSpecies(uniqueSpecies);
+      const speciesMap: Record<string, { comName: string, sciName: string }> = {};
+      Object.values(groupedByBird).flat().forEach(s => {
+        if (!speciesMap[s.speciesCode]) {
+          speciesMap[s.speciesCode] = {
+            comName: s.comName,
+            sciName: s.sciName
+          };
+        }
+      });
+      loadPhotosForSpecies(speciesMap);
     }
   }, [groupedByBird, loadPhotosForSpecies]);
 

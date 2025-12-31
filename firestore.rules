@@ -30,10 +30,6 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       // Only backend (admin SDK) writes to this, so no write rules needed for client
     }
-    
-    // Rate limits
-    match /api_rate_limits/{docId} {
-       allow read, write: if false; // Only backend accesses this
     }
   }
 }

@@ -2,9 +2,14 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 import type { ReactNode } from 'react';
 import { getBirdPhotos, type BirdImage } from '../services/photoService';
 
+interface BirdMetadata {
+    comName: string;
+    sciName: string;
+}
+
 interface BirdPhotosContextType {
     photos: Record<string, BirdImage | null>;
-    loadPhotosForSpecies: (speciesCodes: string[]) => void;
+    loadPhotosForSpecies: (speciesData: Record<string, BirdMetadata>) => void;
 }
 
 const BirdPhotosContext = createContext<BirdPhotosContextType | undefined>(undefined);
@@ -14,6 +19,7 @@ export const BirdPhotosProvider: React.FC<{ children: ReactNode }> = ({ children
     const requestedBirds = useRef(new Set<string>());
     const queueTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const pendingQueueRef = useRef<Set<string>>(new Set());
+    const metadataRef = useRef<Record<string, BirdMetadata>>({});
 
     // Function to process the accumulated queue
     const processQueue = async () => {
@@ -24,7 +30,7 @@ export const BirdPhotosProvider: React.FC<{ children: ReactNode }> = ({ children
         if (speciesToFetch.length === 0) return;
 
         // Filter out any that might have been loaded in the meantime (double check)
-        const uniqueToFetch = speciesToFetch.filter(code => !photos[code] && !requestedBirds.current.has(code));
+        const uniqueToFetch = speciesToFetch.filter(code => photos[code] === undefined && !requestedBirds.current.has(code));
 
         // Mark as requested immediately
         uniqueToFetch.forEach(code => requestedBirds.current.add(code));
@@ -37,21 +43,18 @@ export const BirdPhotosProvider: React.FC<{ children: ReactNode }> = ({ children
             const chunk = uniqueToFetch.slice(i, i + CHUNK_SIZE);
 
             try {
-                const newPhotos = await getBirdPhotos(chunk);
+                // Prepare metadata for this chunk
+                const chunkCommonNames: Record<string, string> = {};
+                const chunkScientificNames: Record<string, string> = {};
 
-                // Transform request: key by common name (which we don't have here directly from service)
-                // Wait, the service returns PhotosByBird: { [speciesCode]: BirdImage }
-                // But our context should probably store by Species Code to be normalized.
-                // Let's check the service definition.
-                // Service returns: Promise<PhotosByBird> where PhotosByBird is { [key: string]: BirdImage | null }
-                // The service is slightly ambiguous on keys, but typically it returns by whatever we asked.
-                // Actually, looking at getBirdPhotos implementation, it returns keys as species code.
+                chunk.forEach(code => {
+                    if (metadataRef.current[code]) {
+                        chunkCommonNames[code] = metadataRef.current[code].comName;
+                        chunkScientificNames[code] = metadataRef.current[code].sciName;
+                    }
+                });
 
-                // We need to map speciesCode -> BirdImage.
-                // The existing hook mapped Common Name -> BirdImage.
-                // It's cleaner to store by Species Code in the context, and let the UI resolve it.
-                // But the UI (Discovery) iterates by Common Name. 
-                // We can store a map of SpeciesCode -> BirdImage.
+                const newPhotos = await getBirdPhotos(chunk, chunkCommonNames, chunkScientificNames);
 
                 setPhotos(prev => ({
                     ...prev,
@@ -66,9 +69,13 @@ export const BirdPhotosProvider: React.FC<{ children: ReactNode }> = ({ children
         }
     };
 
-    const loadPhotosForSpecies = (speciesCodes: string[]) => {
+    const loadPhotosForSpecies = (speciesData: Record<string, BirdMetadata>) => {
         let hasNewRequest = false;
-        speciesCodes.forEach(code => {
+
+        Object.entries(speciesData).forEach(([code, metadata]) => {
+            // Update metadata ref even if already requested
+            metadataRef.current[code] = metadata;
+
             // If not in photos and not already requested/pending
             if (photos[code] === undefined && !requestedBirds.current.has(code)) {
                 pendingQueueRef.current.add(code);
