@@ -1,4 +1,5 @@
 import {onSchedule} from "firebase-functions/v2/scheduler";
+
 import admin, {db} from "../lib/admin";
 import {PhotoStatus, BirdImageCacheDoc} from "../types";
 
@@ -29,13 +30,87 @@ function normalizeOldCacheEntry(
 }
 
 // Configuration options
-const UNSPLASH_ACCESS_KEY = "YOUR_UNSPLASH_ACCESS_KEY"; // Replace with your actual key
+const UNSPLASH_ACCESS_KEY = process.env.UNSPLASH_ACCESS_KEY || "YOUR_UNSPLASH_ACCESS_KEY";
 
-// Set to true to avoid hitting Unsplash API during development
-const DEVELOPMENT_MODE = true;
+// Rate limiting configuration
+const UNSPLASH_RATE_LIMIT = 50; // 50 requests per hour (Unsplash demo API limit)
+const RATE_LIMIT_PERIOD_HOURS = 1;
+const RATE_LIMIT_COLLECTION = "api_rate_limits";
+const UNSPLASH_RATE_LIMIT_DOC = "unsplash_api";
 
-// App logo URL to use in development mode
+// Set to false to use the real Unsplash API in production
+const DEVELOPMENT_MODE = false;
+
+// App logo URL to use in development mode or when rate limit is exceeded
 const APP_LOGO_URL = "https://birdspotting.app/birdspotting_logo_256.png";
+
+/**
+ * Check if we've hit the Unsplash API rate limit
+ * @return {Promise<boolean>} True if rate limit has been hit, false otherwise
+ */
+async function isRateLimitExceeded(): Promise<boolean> {
+  // Skip check in development mode
+  if (DEVELOPMENT_MODE) {
+    return false;
+  }
+
+  try {
+    const rateLimitRef = db.collection(RATE_LIMIT_COLLECTION).doc(UNSPLASH_RATE_LIMIT_DOC);
+    const rateLimitDoc = await rateLimitRef.get();
+
+    if (!rateLimitDoc.exists) {
+      // Initialize rate limit tracking if it doesn't exist
+      await rateLimitRef.set({
+        requestCount: 0,
+        periodStart: admin.firestore.Timestamp.now(),
+        lastRequest: admin.firestore.Timestamp.now(),
+      });
+      return false;
+    }
+
+    const data = rateLimitDoc.data();
+    const now = admin.firestore.Timestamp.now();
+    const periodStart = data?.periodStart?.toDate() || new Date(0);
+    const hoursSincePeriodStart = (now.toDate().getTime() - periodStart.getTime()) / (1000 * 60 * 60);
+
+    // Reset counter if period has elapsed
+    if (hoursSincePeriodStart >= RATE_LIMIT_PERIOD_HOURS) {
+      await rateLimitRef.set({
+        requestCount: 0,
+        periodStart: now,
+        lastRequest: now,
+      });
+      return false;
+    }
+
+    // Check if we've hit the limit
+    const requestCount = data?.requestCount || 0;
+    return requestCount >= UNSPLASH_RATE_LIMIT;
+  } catch (error) {
+    console.error("Error checking rate limit:", error);
+    // Fail safe: if we can't check, assume we're at the limit
+    return true;
+  }
+}
+
+/**
+ * Increment the API request counter
+ */
+async function incrementRequestCount(): Promise<void> {
+  if (DEVELOPMENT_MODE) {
+    return;
+  }
+
+  try {
+    const rateLimitRef = db.collection(RATE_LIMIT_COLLECTION).doc(UNSPLASH_RATE_LIMIT_DOC);
+    await rateLimitRef.update({
+      requestCount: admin.firestore.FieldValue.increment(1),
+      lastRequest: admin.firestore.Timestamp.now(),
+    });
+  } catch (error) {
+    console.error("Error incrementing request count:", error);
+  }
+}
 
 /**
  * Fetches a bird image based on species code or common name
@@ -51,46 +126,57 @@ async function getBirdImageFromUnsplash(speciesCode: string, comName: string): P
     return APP_LOGO_URL;
   }
 
+  // Check if we've hit the API rate limit
+  const rateLimitExceeded = await isRateLimitExceeded();
+  if (rateLimitExceeded) {
+    console.log(`[RATE LIMIT] Unsplash API rate limit exceeded, using app logo for ${speciesCode}`);
+    return APP_LOGO_URL;
+  }
+
   // Production mode: Actually hit the Unsplash API
   try {
-    // Create a search query using common name if available, otherwise use species code
-    let searchQuery;
-    if (comName && comName.length > 0) {
-      // Use common name for more accurate results
-      searchQuery = comName;
-    } else {
-      // Extract name part from species code (e.g., "mallar3" -> "mallard")
-      searchQuery = speciesCode.replace(/[0-9]+$/, "");
-    }
+    console.log(`Searching Unsplash API for bird: ${comName || speciesCode}`);
 
-    // Add "bird" to the search query for more specific results
-    searchQuery = `${searchQuery} bird`;
+    // Use common name for better search results, but fall back to species code if needed
+    const searchTerm = comName ?
+      `${comName} bird` : // Add "bird" to improve relevance
+      `bird ${speciesCode}`;
 
-    console.log(`Searching Unsplash for: ${searchQuery}`);
+    const url = `https://api.unsplash.com/search/photos?query=${encodeURIComponent(searchTerm)}&per_page=1`;
 
-    const response = await fetch(
-      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(searchQuery)}&per_page=1&orientation=landscape`,
-      {
-        headers: {
-          "Authorization": `Client-ID ${UNSPLASH_ACCESS_KEY}`,
-        },
-      }
-    );
+    const response = await fetch(url, {
+      headers: {
+        "Authorization": `Client-ID ${UNSPLASH_ACCESS_KEY}`,
+        "Accept-Version": "v1",
+      },
+    });
+
+    // Increment the API request counter
+    await incrementRequestCount();
 
     if (!response.ok) {
-      throw new Error(`Unsplash API error: ${response.status}`);
+      console.error(`Unsplash API error: ${response.status} ${response.statusText}`);
+
+      // Check for rate limit response (429 Too Many Requests)
+      if (response.status === 429) {
+        console.warn("Unsplash rate limit hit during API call");
+        return APP_LOGO_URL;
+      }
+      return null;
     }
 
     const data = await response.json();
 
+    // Check if we got any results
     if (data.results && data.results.length > 0) {
-      // Get regular sized image URL
-      return data.results[0].urls.small;
+      // Return the regular sized image URL (typically around 1080px)
+      return data.results[0].urls.regular;
+    } else {
+      console.log(`No images found on Unsplash for: ${searchTerm}`);
+      return null;
     }
-
-    return null;
   } catch (error) {
-    console.error(`Error fetching Unsplash image for ${speciesCode}:`, error);
+    console.error(`Error fetching image from Unsplash for ${speciesCode}:`, error);
     return null;
   }
 }

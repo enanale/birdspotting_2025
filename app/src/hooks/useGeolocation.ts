@@ -1,13 +1,16 @@
+
 import { useState, useEffect } from 'react';
 import { getCityFromCoords } from '../services/locationService';
+
+export interface Location {
+  latitude: number;
+  longitude: number;
+}
 
 interface GeolocationState {
   loading: boolean;
   error: GeolocationPositionError | Error | null;
-  data: {
-    latitude: number;
-    longitude: number;
-  } | null;
+  data: Location | null;
   locationName: string | null;
 }
 
@@ -47,7 +50,7 @@ const useGeolocation = () => {
     };
 
     const onError = (error: GeolocationPositionError) => {
-      console.error(`Geolocation error: ${error.message}`);
+      console.error(`Geolocation error: ${error.message} `);
       setDefaultLocation();
     };
 

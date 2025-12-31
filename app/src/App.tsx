@@ -4,6 +4,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import theme from './theme/theme';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { BirdPhotosProvider } from './context/BirdPhotosContext';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
 import { CircularProgress, Box } from '@mui/material';
@@ -39,12 +40,14 @@ const AppRoutes = () => {
 function App() {
   return (
     <AuthProvider>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <Router>
-          <AppRoutes />
-        </Router>
-      </ThemeProvider>
+      <BirdPhotosProvider>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <Router>
+            <AppRoutes />
+          </Router>
+        </ThemeProvider>
+      </BirdPhotosProvider>
     </AuthProvider>
   );
 }

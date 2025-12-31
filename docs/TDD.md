@@ -20,7 +20,11 @@ The following technologies will be used to build the application:
   - A custom theme will be developed, featuring gradient styles to create a modern look and feel.
   - A responsive `AppBar` will be a core navigation component.
   - We will use icons from the Material Icons library.
-- **State Management**: Primarily React Hooks (`useState`, `useEffect`, `useContext`). Custom hooks will be created to encapsulate and reuse business logic.
+- **State Management**: Primarily React Hooks (`useState`, `useEffect`, `useContext`).
+  - **Custom Hooks**:
+    - `useBirdSightings`: Encapsulates logic for fetching and grouping sightings from the eBird API.
+    - `useBirdPhotos`: Manages the image queueing and fetching process, abstracting standard React state management.
+    - `useGeolocation`: Manages user location state and permissions.
 
 ### **2.2. Backend (Firebase)**
 
@@ -45,6 +49,14 @@ The following technologies will be used to build the application:
 - **Purpose**: Fetch recent bird sightings data for the Discovery page.
 - **Implementation**: Cloud Functions provide a secure proxy to the eBird API, keeping the API key secure.
 - **Caching Strategy**: Sightings data is cached in Firestore for 30 minutes to reduce API calls.
+
+### **3.2. Security Architecture**
+
+- **Database Rules (`firestore.rules`)**:
+  - **Authentication**: All read/write operations require a valid Firebase Auth token.
+  - **Data Ownership**: Users can only write to their own data paths (e.g., `/users/{userId}`).
+  - **Shared Data**: Read-only access is granted for shared resources like species lists.
+
 
 ### **3.2. eBird.org Image Scraping & Background Processing**
 
