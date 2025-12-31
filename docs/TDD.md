@@ -101,6 +101,7 @@ interface BirdImageCacheDoc {
 - Runs every 5 minutes.
 - Processes PENDING items by priority and timestamp.
 - Calls the Wikipedia Page Summary API using scientific names, falling back to common names if necessary.
+- Implements a polite 100ms delay between API requests.
 - Updates cache entries with high-resolution image URLs or thumbnails.
 
 #### **3.3.4. Request Flow**

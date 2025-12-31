@@ -90,7 +90,8 @@ export const processImageQueue = onSchedule({
   timeoutSeconds: 120,
   memory: "256MiB",
 }, async () => {
-  const BATCH_SIZE = 10; // Process up to 10 items per run
+  const BATCH_SIZE = 100; // Process up to 100 items per run
+  const WIKIPEDIA_RATE_LIMIT_MS = 100; // 100ms between requests to be polite
   const MAX_RETRIES = 3; // Max retries for failed requests
 
   console.log("Starting image queue processing run");
@@ -113,7 +114,7 @@ export const processImageQueue = onSchedule({
 
     console.log(`Found ${pendingDocs.size} pending requests to process`);
 
-    // Process each document sequentially
+    // Process each document sequentially with rate limiting
     for (const doc of pendingDocs.docs) {
       const speciesCode = doc.id;
       // Normalize data to ensure all fields exist (handles old entries)
@@ -195,6 +196,9 @@ export const processImageQueue = onSchedule({
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
       }
+
+      // Rate limiting - wait before processing next item
+      await new Promise((resolve) => setTimeout(resolve, WIKIPEDIA_RATE_LIMIT_MS));
     }
 
     console.log("Completed processing batch");
