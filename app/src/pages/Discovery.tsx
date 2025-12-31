@@ -76,13 +76,54 @@ const Discovery: React.FC = () => {
                 {openBirds[comName] ? <ExpandLess /> : <ExpandMore />}
               </ListItemButton>
               <Collapse in={openBirds[comName]} timeout="auto" unmountOnExit>
-                <List component="div" disablePadding>
-                  {birdSightings.map((sighting) => (
-                    <ListItem key={sighting.subId} sx={{ pl: 4 }}>
-                      <ListItemText primary={sighting.locName} secondary={`Date: ${sighting.obsDt} | Count: ${sighting.howMany}`} />
-                    </ListItem>
-                  ))}
-                </List>
+                <Box sx={{ px: 4, py: 2 }}>
+                  {photos[birdSightings[0].speciesCode]?.imageUrl ? (
+                    <Box
+                      component="img"
+                      src={photos[birdSightings[0].speciesCode]?.imageUrl || ''}
+                      alt={comName}
+                      sx={{
+                        width: '100%',
+                        maxHeight: 300,
+                        objectFit: 'cover',
+                        borderRadius: 2,
+                        boxShadow: 3,
+                        mb: 2,
+                        display: 'block'
+                      }}
+                    />
+                  ) : (
+                    <Box
+                      sx={{
+                        width: '100%',
+                        height: 200,
+                        bgcolor: 'grey.100',
+                        borderRadius: 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        mb: 2,
+                        border: '1px dashed',
+                        borderColor: 'grey.300'
+                      }}
+                    >
+                      <ImageIcon sx={{ fontSize: 40, color: 'grey.400', mr: 1 }} />
+                      <Typography color="text.secondary">
+                        {photos[birdSightings[0].speciesCode] === null ? 'Finding photo...' : 'No photo available'}
+                      </Typography>
+                    </Box>
+                  )}
+                  <List component="div" disablePadding>
+                    {birdSightings.map((sighting) => (
+                      <ListItem key={sighting.subId} disableGutters>
+                        <ListItemText
+                          primary={sighting.locName}
+                          secondary={`Date: ${sighting.obsDt} | Count: ${sighting.howMany}`}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                </Box>
               </Collapse>
             </React.Fragment>
           ))}
