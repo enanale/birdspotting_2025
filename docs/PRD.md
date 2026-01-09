@@ -1,8 +1,8 @@
 # **Product Requirements Document: Birdspotting V2**
 
-Version: 1.2  
-Date: July 5, 2025  
-Status: In Review
+Version: 1.3  
+Date: January 8, 2026  
+Status: Active Development
 
 ## **1\. Introduction & Vision**
 
@@ -107,7 +107,48 @@ Our primary users are "curious explorers." These are individuals who enjoy being
 
 ## **5\. Data Models**
 
-TBD
+### **5.1. User Profile** (`/users/{userId}`)
+
+| Field | Type | Description |
+| :---- | :---- | :---- |
+| `uid` | string | Firebase Auth UID (document ID) |
+| `email` | string | User's email address |
+| `displayName` | string | User's display name from Google profile |
+| `photoURL` | string | Optional profile photo URL |
+| `createdAt` | timestamp | Account creation date |
+| `lastLoginAt` | timestamp | Last login timestamp |
+
+### **5.2. Sighting** (`/sightings/{sightingId}`)
+
+| Field | Type | Description |
+| :---- | :---- | :---- |
+| `userId` | string | Reference to owning user |
+| `speciesCode` | string | eBird species code |
+| `comName` | string | Bird common name |
+| `sciName` | string | Bird scientific name |
+| `obsDt` | timestamp | Date/time of observation |
+| `location` | geopoint | GPS coordinates |
+| `locName` | string | Human-readable location name |
+| `notes` | string | Optional user notes |
+| `photoUrl` | string | Optional user-uploaded photo URL |
+| `createdAt` | timestamp | Record creation timestamp |
+| `updatedAt` | timestamp | Last modification timestamp |
+
+### **5.3. Bird Image Cache** (`/ebird_image_cache/{speciesCode}`)
+
+| Field | Type | Description |
+| :---- | :---- | :---- |
+| `speciesCode` | string | eBird species code (document ID) |
+| `comName` | string | Bird common name |
+| `sciName` | string | Bird scientific name |
+| `status` | enum | `PENDING`, `PROCESSING`, `COMPLETED`, `FAILED` |
+| `thumbnailUrl` | string | ~320px thumbnail image URL |
+| `originalUrl` | string | Full-resolution image URL |
+| `createdAt` | timestamp | Cache entry creation date |
+| `updatedAt` | timestamp | Last update timestamp |
+| `priority` | number | Processing priority (higher = sooner) |
+| `errorCount` | number | Failed fetch attempt count |
+| `lastError` | string | Most recent error message |
 
 ## **6\. Technical Stack & Architecture**
 
@@ -126,8 +167,8 @@ TBD
   * Cloud Functions for serverless logic  
 * **External APIs:**  
   * **eBird API:** For nearby sightings data and species taxonomy. Requires an API key.  
-  * **Macaulay Library API (Cornell Lab):** For high-quality bird photos.  
-* **Mapping:** Leaflet.js or Mapbox GL JS
+  * **Wikipedia REST API:** For bird photos via Page Summary endpoint. Uses scientific name lookup with common name fallback.  
+* **Mapping:** Leaflet.js or Mapbox GL JS (planned)
 
 ## **7\. Non-Functional Requirements**
 
@@ -138,7 +179,21 @@ TBD
 | **Security** | \- User passwords must be securely hashed and salted (handled by BaaS).\<br\>- All data transmission between client and server must use HTTPS.\<br\>- Database security rules must prevent users from accessing or modifying other users' data. |
 | **Usability** | \- The application must be fully responsive and optimized for mobile, tablet, and desktop views.\<br\>- The user flow for logging a sighting should take no more than 30 seconds for an experienced user.\<br\>- Error messages must be clear, user-friendly, and suggest a solution. |
 
-## **8\. Release Plan & Phasing**
+## **8\. MVP Implementation Status**
+
+| Feature | Status | Notes |
+| :---- | :---- | :---- |
+| Google Sign-in | ✅ Complete | Firebase Auth with persistent sessions |
+| Landing Page | ✅ Complete | Public page with login CTA |
+| Discovery - List View | ✅ Complete | Grouped by species with photos |
+| Discovery - Map View | 🔲 Pending | Planned for V2.0 |
+| Bird Image Cache | ✅ Complete | Wikipedia integration with queue processing |
+| My Sightings | 🔲 Pending | Stub exists, needs implementation |
+| Log Sighting Form | 🔲 Pending | Needs species autocomplete |
+| Profile Page | 🔲 Pending | Stub exists, needs stats display |
+| Achievements | 🔲 Pending | Stub exists, needs badge logic |
+
+## **9\. Release Plan & Phasing**
 
 * **Version 2.0 (MVP):**  
   * Epic 1: User Onboarding & Account Management (P0)  
@@ -152,10 +207,11 @@ TBD
   * Epic 5: Settings & Information (Contact, About)  
   * Advanced search/filter options for discovery.
 
-## **9\. Out of Scope for V2**
+## **10\. Out of Scope for V2**
 
 * Social features (following users, commenting, sharing).  
 * Offline mode.  
 * Push notifications.  
 * Team or group-based logging.  
-* Advanced data import/export.
+* Advanced data import/export.  
+* Bird identification from user-uploaded photos (AI/ML).

@@ -1,8 +1,8 @@
 # **Technical Design Document: Birdspotting V2**
 
-Version: 1.0  
-Date: July 5, 2025  
-Status: Initial Draft
+Version: 1.1  
+Date: January 8, 2026  
+Status: Active Development
 
 ## **1. Introduction**
 
@@ -10,107 +10,292 @@ This document outlines the technical architecture, tools, and standards for the 
 
 ## **2. Technology Stack**
 
-The following technologies will be used to build the application:
+### **2.1. Architecture Overview**
 
-### **2.1. Frontend**
+```mermaid
+flowchart TB
+    subgraph Client["Frontend (React + Vite)"]
+        App[App.tsx]
+        Auth[AuthContext]
+        Photos[BirdPhotosContext]
+        Discovery[Discovery Page]
+        Services[Services Layer]
+    end
 
-- **Framework**: React with TypeScript
-- **Build Tool**: Vite
-- **UI Framework**: Material-UI (MUI)
-  - A custom theme will be developed, featuring gradient styles to create a modern look and feel.
-  - A responsive `AppBar` will be a core navigation component.
-  - We will use icons from the Material Icons library.
-- **State Management**: Primarily React Hooks (`useState`, `useEffect`, `useContext`).
-    - `BirdPhotosContext`: Global context provider that manages debounced, deduplicated requests for bird photos using a queue-based system.
-    - `useBirdPhotosContext`: Hook to access the bird photo state and request new photos.
-    - `useGeolocation`: Manages user location state and permissions.
+    subgraph Firebase["Firebase Platform"]
+        FAuth[Firebase Auth]
+        Firestore[(Cloud Firestore)]
+        Functions[Cloud Functions]
+        Hosting[Firebase Hosting]
+    end
 
-### **2.2. Backend (Firebase)**
+    subgraph External["External APIs"]
+        eBird[eBird API]
+        Wikipedia[Wikipedia REST API]
+    end
 
-- **Authentication**: Firebase Authentication will be used, starting with Google Sign-in to provide a low-friction onboarding experience.
-- **Database**: Cloud Firestore will serve as the primary NoSQL database for storing user data, sightings, and application state.
-- **Hosting**: Firebase Hosting will be used to deploy and serve the static assets of the web application.
-- **Analytics**: Google Analytics for Firebase will be integrated to track user engagement and application performance against the KPIs defined in the PRD.
-- **Serverless Logic**: Cloud Functions for Firebase will be used for backend logic that should not run on the client, such as interacting with external APIs or performing intensive computations.
-- **Machine Learning**: Google's Vertex AI will be leveraged for potential future machine learning features, such as bird identification from user-uploaded photos.
+    subgraph Collections["Firestore Collections"]
+        Users["/users/{userId}"]
+        Sightings["/sightings/{id}"]
+        Cache["/ebird_image_cache/{code}"]
+    end
 
-- **Language**: TypeScript will be used across the entire codebase for type safety and improved developer experience.
-- **Node.js Version Management**: NVM (Node Version Manager) is recommended to ensure a consistent Node.js environment across the team.
-- **Configuration**: Environment variables (`.env` files) will be used to manage configuration details like API keys and Firebase settings.
-- **Development Server**: Vite's built-in development server with Hot Module Replacement (HMR) will be used for a fast feedback loop.
+    App --> Auth
+    App --> Photos
+    Discovery --> Services
+    Services --> Functions
+
+    Auth --> FAuth
+    Functions --> eBird
+    Functions --> Wikipedia
+    Functions --> Firestore
+    Firestore --> Collections
+
+    Client --> Hosting
+```
+
+### **2.2. Frontend**
+
+- **Framework**: React 18 with TypeScript
+- **Build Tool**: Vite 5
+- **UI Framework**: Material-UI (MUI) v5
+  - Custom theme with gradient styles
+  - Responsive `AppBar` navigation
+  - Material Icons library
+- **Routing**: React Router v6
+- **State Management**: React Hooks + Context API
+  - `AuthContext`: Authentication state and user info
+  - `BirdPhotosContext`: Photo cache and request batching
+  - `useGeolocation`: Location state and permissions
+
+### **2.3. Backend (Firebase)**
+
+| Service | Purpose |
+|---------|---------|
+| **Authentication** | Google Sign-in for low-friction onboarding |
+| **Firestore** | NoSQL database for users, sightings, and cache |
+| **Hosting** | Static asset deployment |
+| **Analytics** | Track KPIs defined in PRD |
+| **Cloud Functions** | Serverless API proxy and background processing |
+
+### **2.4. Development Environment**
+
+- **Language**: TypeScript across entire codebase
+- **Node.js**: v20+ (managed via `.nvmrc`)
+- **Package Manager**: npm
+- **Configuration**: `.env` files for API keys and Firebase settings
+- **Dev Server**: Vite with Hot Module Replacement (HMR)
+
+---
 
 ## **3. External API Integrations**
 
-### **3.1. eBird API Integration**
+### **3.1. eBird API**
 
-- **Purpose**: Fetch recent bird sightings data for the Discovery page.
-- **Implementation**: Cloud Functions provide a secure proxy to the eBird API, keeping the API key secure.
-- **Caching Strategy**: Sightings data is cached in Firestore for 30 minutes to reduce API calls.
+- **Purpose**: Fetch recent bird sightings for the Discovery page
+- **Endpoint**: `https://api.ebird.org/v2/data/obs/geo/recent`
+- **Implementation**: Cloud Functions proxy keeps API key secure
+- **Caching**: Sightings cached in Firestore for 30 minutes
 
-### **3.2. Security Architecture**
+### **3.2. Wikipedia REST API**
 
-- **Database Rules (`firestore.rules`)**:
-  - **Authentication**: All read/write operations require a valid Firebase Auth token.
-  - **Data Ownership**: Users can only write to their own data paths (e.g., `/users/{userId}`).
-  - **Shared Data**: Read access is granted for the bird image cache so clients can display photos.
+- **Purpose**: Fetch bird photos for display
+- **Endpoint**: `https://en.wikipedia.org/api/rest_v1/page/summary/{title}`
+- **Lookup Strategy**: Scientific name (primary) → Common name (fallback)
+- **Rate Limiting**: 100ms delay between requests (polite client)
+- **User-Agent**: Custom header per Wikipedia API policy
 
-### **3.3. Wikipedia Image Integration & Background Processing**
+---
 
-#### **3.3.1. Architecture Overview**
+## **4. Data Models**
 
-To provide accurate and free bird thumbnails, we use the Wikipedia REST API Page Summary endpoint. Lookups are performed primarily using Scientific Names to ensure high precision, with a fallback to Common Names if the scientific name lookup fails. A background queue system handles cases where images are not yet cached.
-
-#### **3.3.2. Data Model**
-
-The `ebird_image_cache` Firestore collection stores cached images and manages the processing queue:
+### **4.1. User (`/users/{userId}`)**
 
 ```typescript
-interface BirdImageCacheDoc {
-  speciesCode: string;      // The eBird species code (e.g., "bcnher")
-  comName: string;         // Common name of the bird
-  sciName: string;         // Scientific name of the bird (e.g., "Nycticorax nycticorax")
-  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
-  createdAt: Timestamp;     // When this entry was first created
-  updatedAt: Timestamp;     // Last time this entry was modified
-  priority: number;         // Higher values processed first
-  imageUrl: string | null;  // URL to the Wikipedia original/thumbnail image
-  lastError?: string;       // Store error message if any
-  errorCount: number;       // Number of failed attempts
+interface User {
+  uid: string;                    // Firebase Auth UID
+  email: string;                  // User email
+  displayName: string;            // From Google profile
+  photoURL?: string;              // Profile photo
+  createdAt: Timestamp;           // Account creation
+  lastLoginAt: Timestamp;         // Last login
 }
 ```
 
-#### **3.3.3. Components**
+### **4.2. Sighting (`/sightings/{sightingId}`)**
 
-**1. `BirdPhotosContext` (Frontend)**
+```typescript
+interface Sighting {
+  userId: string;                 // Owner reference
+  speciesCode: string;            // eBird species code
+  comName: string;                // Common name
+  sciName: string;                // Scientific name
+  obsDt: Timestamp;               // Observation time
+  location: GeoPoint;             // GPS coordinates
+  locName: string;                // Location name
+  notes?: string;                 // User notes
+  photoUrl?: string;              // User photo URL
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+```
 
-- Centralizes photo state and request logic.
-- Implements a global request cache to prevent redundant calls across sessions.
-- Debounces multiple species requests into single batched API calls.
-- Provides scientific and common names metadata to the backend.
+### **4.3. BirdImageCache (`/ebird_image_cache/{speciesCode}`)**
 
-**2. `getBirdPhotos` Cloud Function**
+```typescript
+type PhotoStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
 
-- Serves client requests for bird images by species code.
-- Checks Firestore cache for existing images.
-- Updates missing metadata (scientific/common names) in existing cache entries.
-- Creates PENDING entries for cache misses.
-- Returns cached data immediately for completed entries.
+interface BirdImageCacheDoc {
+  speciesCode: string;            // Document ID
+  comName: string;
+  sciName: string;
+  status: PhotoStatus;
+  thumbnailUrl: string | null;    // ~320px thumbnail
+  originalUrl: string | null;     // Full resolution
+  imageUrl: string | null;        // Deprecated: legacy compat
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  processAfter?: Timestamp;       // For retry backoff
+  priority: number;               // Higher = processed sooner
+  errorCount: number;
+  lastError?: string;
+}
+```
 
-**3. `processImageQueue` Scheduled Function**
+---
 
-- Runs every 5 minutes.
-- Processes PENDING items by priority and timestamp.
-- Calls the Wikipedia Page Summary API using scientific names, falling back to common names if necessary.
-- Implements a polite 100ms delay between API requests.
-- Updates cache entries with high-resolution image URLs or thumbnails.
+## **5. Security Architecture**
 
-#### **3.3.4. Request Flow**
+### **5.1. Firestore Security Rules**
 
-1. User views Discovery page; `groupedByBird` data is available.
-2. `Discovery.tsx` triggers `loadPhotosForSpecies` in the context with metadata.
-3. Context batches requests and calls `getBirdPhotos` Cloud Function.
-4. For cached species, photos display immediately.
-5. For uncached species:
-   - Function creates PENDING entries.
-   - Background processor (`processImageQueue`) fetches photo from Wikipedia.
-   - Client's re-renders display photos when available.
+```javascript
+// Key rules in firestore.rules:
+// - All operations require authentication
+// - Users can only write to their own documents
+// - Sightings have owner validation on create/update/delete
+// - Bird image cache is read-only for clients
+```
+
+### **5.2. API Key Security**
+
+- eBird API key stored in Firebase environment config
+- Never exposed to client; Cloud Functions act as secure proxy
+
+---
+
+## **6. Background Processing**
+
+### **6.1. Image Queue System**
+
+The `processImageQueue` scheduled function handles asynchronous image fetching:
+
+| Setting | Value |
+|---------|-------|
+| **Schedule** | Every 5 minutes |
+| **Batch Size** | Up to 100 items per run |
+| **Rate Limit** | 100ms between Wikipedia requests |
+| **Max Retries** | 3 attempts before FAILED status |
+| **Timeout** | 120 seconds |
+
+### **6.2. Request Flow**
+
+1. Client requests photos via `getBirdPhotos` Cloud Function
+2. Function checks cache; returns immediately if COMPLETED
+3. For cache misses, creates PENDING entry
+4. `processImageQueue` picks up PENDING items by priority
+5. Fetches from Wikipedia, updates cache to COMPLETED
+6. Client receives photo on next request/refresh
+
+---
+
+## **7. Code Patterns & Standards**
+
+### **7.1. Shared Utilities**
+
+Common functions are extracted to `/functions/src/lib/` to avoid duplication:
+
+| Utility | Location | Used By |
+|---------|----------|---------|
+| `normalizeOldCacheEntry` | `lib/cacheUtils.ts` | `getBirdPhotos`, `processImageQueue` |
+| `isHybridSpecies` | `lib/cacheUtils.ts` | `processImageQueue` |
+| `admin`, `db` | `lib/admin.ts` | All cloud functions |
+
+### **7.2. Error Handling**
+
+- Cloud Functions should catch and log all errors
+- Return user-friendly error messages via `HttpsError`
+- Use exponential backoff for retryable failures
+
+### **7.3. Type Sharing**
+
+Types are currently defined in `/functions/src/types/index.ts`. When frontend needs these types, either:
+- Duplicate with a `// Synced from functions/src/types` comment, or
+- Create a shared package (future enhancement)
+
+---
+
+## **8. Testing Strategy**
+
+### **8.1. Local Development**
+
+```bash
+# Start Firebase emulators
+firebase emulators:start
+
+# Run frontend dev server
+cd app && npm run dev
+```
+
+### **8.2. Unit Tests**
+
+- Framework: Vitest (frontend), Jest (functions)
+- Mock Firebase services for isolation
+- Target: >80% coverage on business logic
+
+### **8.3. Integration Tests**
+
+- Use Firebase Emulator Suite
+- Test Cloud Function → Firestore interactions
+- Verify security rules with test scenarios
+
+---
+
+## **9. Deployment**
+
+### **9.1. Commands**
+
+```bash
+# Deploy everything
+firebase deploy
+
+# Deploy only functions
+firebase deploy --only functions
+
+# Deploy only hosting
+firebase deploy --only hosting
+
+# Deploy only Firestore rules
+firebase deploy --only firestore:rules
+```
+
+### **9.2. Environment Configuration**
+
+```bash
+# Set eBird API key
+firebase functions:config:set ebird.api_key="YOUR_KEY"
+
+# View current config
+firebase functions:config:get
+```
+
+### **9.3. Staging vs Production**
+
+Use Firebase project aliases:
+
+```bash
+# Use staging
+firebase use staging
+
+# Use production
+firebase use production
+```

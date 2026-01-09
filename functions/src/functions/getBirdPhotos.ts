@@ -1,35 +1,7 @@
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import admin, {db} from "../lib/admin";
+import {normalizeOldCacheEntry} from "../lib/cacheUtils";
 import {CallableData, PhotoStatus, BirdImage, BirdImageCacheDoc} from "../types";
-
-/**
- * Ensures compatibility with old cache entries that might not have all fields
- * @param {FirebaseFirestore.DocumentData} docData - Raw document data from Firestore
- * @param {string} speciesCode - The species code for this entry
- * @return {BirdImageCacheDoc} Normalized BirdImageCacheDoc with defaults for missing fields
- */
-function normalizeOldCacheEntry(
-  docData: FirebaseFirestore.DocumentData,
-  speciesCode: string
-): BirdImageCacheDoc {
-  // Apply default values for any missing fields
-  const normalized: BirdImageCacheDoc = {
-    status: docData.status || "PENDING",
-    speciesCode: docData.speciesCode || speciesCode,
-    comName: docData.comName || "",
-    sciName: docData.sciName || "",
-    imageUrl: docData.imageUrl || null,
-    thumbnailUrl: docData.thumbnailUrl || docData.imageUrl || null, // Fallback for legacy
-    originalUrl: docData.originalUrl || docData.imageUrl || null, // Fallback for legacy
-    createdAt: docData.createdAt || admin.firestore.Timestamp.now(),
-    updatedAt: docData.updatedAt || admin.firestore.Timestamp.now(),
-    priority: docData.priority || 1,
-    errorCount: docData.errorCount || 0,
-    lastError: docData.lastError || "",
-  };
-
-  return normalized;
-}
 
 /**
  * Cloud function that gets bird photos from the cache or creates a pending request

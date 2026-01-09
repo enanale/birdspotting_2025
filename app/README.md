@@ -1,69 +1,139 @@
-# React + TypeScript + Vite
+# Birdspotting V2
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern, mobile-friendly web application for discovering nearby birds and logging personal sightings.
 
-Currently, two official plugins are available:
+## Overview
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Birdspotting helps casual nature enthusiasts and budding birdwatchers identify birds they see and keep a personal record of their discoveries. Built with React, Firebase, and integrated with eBird and Wikipedia APIs.
 
-## Expanding the ESLint configuration
+## Tech Stack
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Frontend
+- **React 18** with TypeScript
+- **Vite 5** - Build tool with HMR
+- **Material-UI (MUI) v5** - UI components with custom theme
+- **React Router v6** - Client-side routing
+- **Firebase SDK** - Authentication, Firestore, Hosting
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### Backend
+- **Firebase Authentication** - Google Sign-in
+- **Cloud Firestore** - NoSQL database
+- **Cloud Functions** - Serverless API proxy and background processing
+- **Firebase Hosting** - Static asset deployment
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
+### External APIs
+- **eBird API** - Recent bird sightings data
+- **Wikipedia REST API** - Bird photos via Page Summary endpoint
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Project Structure
+
+```
+birdspotting_2025/
+├── app/                    # Frontend React application
+│   ├── src/
+│   │   ├── components/     # Reusable UI components
+│   │   ├── context/        # React Context providers
+│   │   ├── hooks/          # Custom React hooks
+│   │   ├── pages/          # Route pages
+│   │   ├── services/       # API service layers
+│   │   └── theme/          # MUI theme configuration
+│   └── dist/               # Production build output
+├── functions/              # Cloud Functions
+│   └── src/
+│       ├── functions/      # Function implementations
+│       ├── lib/            # Shared utilities
+│       └── types/          # TypeScript type definitions
+├── docs/                   # Project documentation
+│   ├── PRD.md             # Product Requirements Document
+│   └── TDD.md             # Technical Design Document
+└── firestore.rules        # Firestore security rules
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Development Setup
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### Prerequisites
+- Node.js 20+ (use `.nvmrc` for version management)
+- Firebase CLI: `npm install -g firebase-tools`
+- Firebase project with enabled services (Auth, Firestore, Functions, Hosting)
 
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Installation
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd birdspotting_2025
 ```
+
+2. Install dependencies:
+```bash
+# Frontend
+cd app && npm install
+
+# Cloud Functions
+cd ../functions && npm install
+```
+
+3. Set up environment variables:
+```bash
+# In functions directory, create .env file
+cd functions
+firebase functions:config:get > .env.birdspotting-4e0da
+```
+
+4. Start development servers:
+```bash
+# Frontend (from app directory)
+npm run dev
+
+# Firebase emulators (from project root)
+firebase emulators:start
+```
+
+## Building & Deployment
+
+### Build
+
+```bash
+# Build frontend
+cd app && npm run build
+
+# Build functions
+cd ../functions && npm run build
+```
+
+### Deploy
+
+```bash
+# Deploy everything
+firebase deploy
+
+# Deploy only functions
+firebase deploy --only functions
+
+# Deploy only hosting
+firebase deploy --only hosting
+```
+
+## Features
+
+### ✅ Implemented
+- Google Sign-in authentication
+- Public landing page
+- Nearby bird discovery (list view with photos)
+- Bird image caching with Wikipedia integration
+- Background queue processing for images
+
+### 🔲 In Progress
+- My Sightings (personal log CRUD)
+- Profile page with user stats
+- Achievements & badges system
+- Map view for bird sightings
+
+## Documentation
+
+- [Product Requirements Document](../docs/PRD.md) - Product vision, features, and requirements
+- [Technical Design Document](../docs/TDD.md) - Architecture, data models, and implementation details
+
+## License
+
+Private project - All rights reserved
