@@ -27,6 +27,13 @@ Birdspotting helps casual nature enthusiasts and budding birdwatchers identify b
 - **eBird API** - Recent bird sightings data
 - **Wikipedia REST API** - Bird photos via Page Summary endpoint
 
+### Design
+Inspired by the geometric, low-poly aesthetic of *Secrets of Raetikon*:
+- **Color Palette**: Forest greens (`#1B4332`, `#2D6A4F`), sky blues (`#457B9D`), parchment backgrounds
+- **Typography**: Outfit (headings) + Inter (body) from Google Fonts
+- **Geometric Elements**: Triangular clip-paths, jagged header edges, layered mountain SVGs
+- **Animations**: Flying bird silhouettes, fade-in effects, hover transitions
+
 ## Project Structure
 
 ```

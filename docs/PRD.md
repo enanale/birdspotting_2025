@@ -1,7 +1,7 @@
 # **Product Requirements Document: Birdspotting V2**
 
-Version: 1.3  
-Date: January 8, 2026  
+Version: 1.4  
+Date: January 10, 2026  
 Status: Active Development
 
 ## **1\. Introduction & Vision**
@@ -169,6 +169,39 @@ Our primary users are "curious explorers." These are individuals who enjoy being
   * **eBird API:** For nearby sightings data and species taxonomy. Requires an API key.  
   * **Wikipedia REST API:** For bird photos via Page Summary endpoint. Uses scientific name lookup with common name fallback.  
 * **Mapping:** Leaflet.js or Mapbox GL JS (planned)
+
+### **6.1 Design Language: "Secrets of Raetikon" Inspiration**
+
+The visual design draws inspiration from the indie game *Secrets of Raetikon*, known for its geometric, low-poly aesthetic and nature-focused atmosphere. This creates a distinctive, memorable experience while complementing the birdwatching theme.
+
+#### **Color Palette**
+
+| Token | Hex | Usage |
+|-------|-----|-------|
+| Forest Deep | `#1B4332` | Headers, primary actions, AppBar |
+| Forest Mid | `#2D6A4F` | Buttons, accents, hover states |
+| Forest Light | `#40916C` | Secondary highlights |
+| Forest Pale | `#74C69D` | Success states, badges |
+| Sky Blue | `#457B9D` | Secondary actions, links |
+| Sky Light | `#A8DADC` | Card borders, backgrounds |
+| Parchment | `#F4F1DE` | Page backgrounds |
+| Snow | `#FAFAFA` | Card backgrounds |
+| Sunset | `#E76F51` | Error states, alerts |
+| Golden | `#F4A261` | Achievement badges |
+
+#### **Typography**
+
+* **Headings:** Outfit (Google Fonts) — geometric sans-serif with strong visual presence
+* **Body Text:** Inter (Google Fonts) — clean, highly readable sans-serif
+
+#### **Geometric Design Elements**
+
+* **Triangular clip-paths:** Cards and buttons feature angular corner cuts
+* **Jagged header edge:** AppBar has a mountain-silhouette bottom edge
+* **Layered mountain backdrops:** Landing page features SVG mountain ranges
+* **Animated bird silhouettes:** Flying birds cross the landing page sky
+* **Hexagonal badges:** Achievement icons use polygon shapes
+* **Timeline connectors:** Sighting history uses vertical line connectors
 
 ## **7\. Non-Functional Requirements**
 

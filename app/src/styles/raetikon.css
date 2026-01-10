@@ -1,0 +1,266 @@
+/**
+ * Raetikon Design System
+ * Geometric, low-poly, nature-inspired styles for Birdspotting
+ */
+
+/* ===== CSS Custom Properties ===== */
+:root {
+  /* Forest & Nature Greens */
+  --color-forest-deep: #1B4332;
+  --color-forest-mid: #2D6A4F;
+  --color-forest-light: #40916C;
+  --color-forest-pale: #74C69D;
+  
+  /* Sky Blues */
+  --color-sky-blue: #457B9D;
+  --color-sky-light: #A8DADC;
+  --color-sky-pale: #E3F2FD;
+  
+  /* Earth & Warm Tones */
+  --color-earth-warm: #8B5A2B;
+  --color-earth-light: #D4A574;
+  
+  /* Neutrals */
+  --color-stone: #6C757D;
+  --color-parchment: #F4F1DE;
+  --color-snow: #FAFAFA;
+  
+  /* Accents */
+  --color-sunset: #E76F51;
+  --color-golden: #F4A261;
+  
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-base: 250ms ease;
+  --transition-slow: 400ms ease;
+}
+
+/* ===== Base Styles ===== */
+body {
+  background-color: var(--color-parchment);
+  min-height: 100vh;
+}
+
+/* ===== Geometric Utilities ===== */
+
+/* Angular card with bottom-right corner cut */
+.raetikon-card {
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%);
+  transition: transform var(--transition-base), box-shadow var(--transition-base);
+}
+
+.raetikon-card:hover {
+  transform: translateY(-2px);
+}
+
+/* Triangular corner accent */
+.triangle-accent {
+  position: relative;
+}
+
+.triangle-accent::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 24px;
+  height: 24px;
+  background: var(--color-forest-mid);
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+  opacity: 0.9;
+}
+
+.triangle-accent-right::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 20px;
+  height: 20px;
+  background: var(--color-sky-light);
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  opacity: 0.7;
+}
+
+/* ===== SVG Background Patterns ===== */
+
+/* Subtle triangle mesh pattern */
+.pattern-triangles {
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0 L60 60 L0 60 Z' fill='%232D6A4F' fill-opacity='0.03'/%3E%3C/svg%3E");
+  background-size: 60px 60px;
+}
+
+/* Mountain silhouette - for footer decoration */
+.pattern-mountains {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 1200 120' xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='none'%3E%3Cpath d='M0 120 L150 40 L300 80 L450 20 L600 60 L750 10 L900 50 L1050 30 L1200 70 L1200 120 Z' fill='%231B4332' fill-opacity='0.15'/%3E%3Cpath d='M0 120 L100 70 L250 90 L400 50 L550 85 L700 45 L850 75 L1000 55 L1200 90 L1200 120 Z' fill='%232D6A4F' fill-opacity='0.1'/%3E%3C/svg%3E");
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  background-position: bottom;
+}
+
+/* ===== Geometric Header Edge ===== */
+.header-edge {
+  position: relative;
+}
+
+.header-edge::after {
+  content: '';
+  position: absolute;
+  bottom: -12px;
+  left: 0;
+  right: 0;
+  height: 12px;
+  background: linear-gradient(135deg, var(--color-forest-deep) 0%, var(--color-forest-mid) 100%);
+  clip-path: polygon(0 0, 100% 0, 98% 100%, 85% 60%, 70% 100%, 55% 40%, 40% 100%, 25% 50%, 10% 100%, 0 70%);
+}
+
+/* ===== Bird Card Styles ===== */
+.bird-card {
+  position: relative;
+  background: var(--color-snow);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(45, 106, 79, 0.1);
+  transition: all var(--transition-base);
+}
+
+.bird-card:hover {
+  border-color: rgba(45, 106, 79, 0.2);
+  box-shadow: 0 8px 24px rgba(27, 67, 50, 0.12);
+}
+
+.bird-card-image {
+  position: relative;
+  overflow: hidden;
+}
+
+.bird-card-image::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 40px;
+  height: 40px;
+  background: var(--color-forest-mid);
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  opacity: 0.85;
+}
+
+/* ===== Sighted Badge ===== */
+.sighted-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  background: var(--color-forest-pale);
+  color: var(--color-forest-deep);
+  font-weight: 600;
+  font-size: 0.75rem;
+  border-radius: 2px;
+  clip-path: polygon(8px 0, 100% 0, 100% 100%, 0 100%, 0 8px);
+}
+
+/* ===== Animations ===== */
+
+/* Subtle float animation for decorative elements */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+/* Bird flying animation */
+@keyframes fly-across {
+  0% {
+    transform: translateX(-100%) translateY(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.6;
+  }
+  90% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateX(100vw) translateY(-20px);
+    opacity: 0;
+  }
+}
+
+.animate-fly {
+  animation: fly-across 15s linear infinite;
+}
+
+/* Fade in up animation */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.5s ease-out forwards;
+}
+
+/* ===== Hero Section ===== */
+.hero-section {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, var(--color-sky-pale) 0%, var(--color-parchment) 100%);
+  overflow: hidden;
+}
+
+.hero-mountains {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40%;
+  pointer-events: none;
+}
+
+.hero-mountains svg {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* ===== Responsive Adjustments ===== */
+@media (max-width: 600px) {
+  .raetikon-card {
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%);
+  }
+  
+  .triangle-accent::before {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .header-edge::after {
+    height: 8px;
+    bottom: -8px;
+  }
+}
